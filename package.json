@@ -1,0 +1,23 @@
+{
+  "name": "freelancer_be",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Node JS service code which includes DB calls",
+  "main": "index.js",
+  "scripts": {
+    "start": "node ./bin/www"
+  },
+  "author": "Varsha Amrutlal Katariya 012468079",
+  "license": "ISC",
+  "dependencies": {
+    "body-parser": "~1.18.2",
+    "cookie-parser": "~1.4.3",
+    "cors": "^2.8.4",
+    "debug": "~2.6.9",
+    "express": "~4.15.5",
+    "jade": "~1.11.0",
+    "morgan": "~1.9.0",
+    "mysql": "^2.15.0",
+    "serve-favicon": "~2.4.5"
+  }
+}
