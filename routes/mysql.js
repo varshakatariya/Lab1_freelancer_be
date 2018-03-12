@@ -4,14 +4,14 @@ var mysql = require('mysql');
 
 //Put your mysql configuration settings - user, password, database and port
 function getConnection(){
-	var connection = mysql.createConnection({
+	var connectionPool = mysql.createPool({
 	    host     : 'localhost',
 	    user     : 'root',
 	    password : 'root',
 	    database : 'freelancer_prototype_db',
 	    port	 : 3306
 	});
-	return connection;
+	return connectionPool;
 }
 
 
@@ -19,9 +19,30 @@ function fetchData(callback,sqlQuery){
 
     console.log("\nSQL Query::"+sqlQuery);
 
-    var connection=getConnection();
+    var pool = getConnection();
 
-    connection.query(sqlQuery, function(err, rows, fields) {
+    pool.getConnection(function(err, connection){
+        if(err){
+            connection.release();
+            console.log("ERROR: "+err.message);
+        }
+        connection.query(sqlQuery,function(error, results, fields) {
+            if (error) {
+                console.log("ERROR: " + error.message);
+            }
+           else{
+               console.log("DB results : ",results);
+           }
+            callback(err, results);
+            console.log("\nConnection closed..");
+            connection.release();
+       });
+
+    });
+
+
+
+    /*connection.query(sqlQuery, function(err, rows, fields) {
         if(err){
             console.log("ERROR: " + err.message);
         }
@@ -33,7 +54,7 @@ function fetchData(callback,sqlQuery){
         callback(err, rows);
     });
     console.log("\nConnection closed..");
-    connection.end();
+    connection.end();*/
 }
 
 exports.fetchData=fetchData;
