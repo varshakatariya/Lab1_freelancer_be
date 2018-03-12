@@ -8,7 +8,7 @@ router.get('/', function(req, res, next) {
 });
 
 //get particular user details
-app.get('/user', function(req, res){
+router.get('/user', function(req, res){
     var userEmail= req.param("email");
     console.log("Request param email "+userEmail);
     user.emailId = userEmail;
@@ -26,6 +26,6 @@ app.get('/user', function(req, res){
         }
         res.send(user);
     },getUser);
-}
+});
 
 module.exports = router;
