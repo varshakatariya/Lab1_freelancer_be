@@ -7,6 +7,38 @@ router.get('/', function(req, res, next) {
     res.send('respond with a resource');
 });
 
+router.post('/bidProject', function(req, res){
+    var bid_id;
+    var getBidId="select max(bid_id) as maxCnt from freelancer_prototype_db.bid";
+    var errors;
+    console.log("max Query is:"+getBidId);
+    mysql.fetchData(function (error,results) {
+        if(error){
+            errors="Unable to process request";
+            res.status(400).json(errors);
+        }
+        else{
+            if(results.length > 0){
+                bid_id = results[0].maxCnt+1;
+                var bidProject="insert into freelancer_prototype_db.bid(bid_id,user_id,project_id,bid_price,period_in_days) values";
+                bidProject= bidProject + " ('"+bid_id+"','"+req.param("user_id")+"','"+req.param("project_id")+"','"+req.param("bid_price")+"','"+req.param("period_in_days")+"' )";
+                console.log("insert Query is:"+bidProject);
+                mysql.fetchData(function (error,results) {
+                    if(error){
+                        errors="Unable to add project at this time."
+                        res.status(400).json({error});
+                    }
+                    else{
+                        if(results.affectedRows > 0){
+                            console.log("inserted"+JSON.stringify(results));
+                            res.send("Bid Done Successfully");
+                        }
+                    }
+                },bidProject);
+            }
+        }
+    },getBidId);
+});
 
 //get List of all bids for project
 router.get('/listOfAllBidsForProject', function(req, res){
@@ -53,9 +85,7 @@ router.get('/listOfAllProjectUserHasBidOn', function(req, res){
     var data = {
         bList: []
     };
-    var user_id= req.param("user_id");
-    console.log("Request param user ID "+user_id);
-
+    var user_id= req.session.userID;
     var getProjectList = "select p.project_id, u.user_id, p.title, u.name, p.avg_bid, b.bid_price,p.status ";
     getProjectList = getProjectList + " from freelancer_prototype_db.bid b, freelancer_prototype_db.project p, freelancer_prototype_db.user u ";
     getProjectList = getProjectList + " where b.project_id = p.project_id and p.status = '"+"Open"+"' and u.user_id = b.user_id and b.user_id = "+user_id;
@@ -66,7 +96,7 @@ router.get('/listOfAllProjectUserHasBidOn', function(req, res){
                 var project = {
                     project_id : results[i].project_id,
                     user_id : results[i].user_id,
-                    ProjectName: results[i].name,
+                    ProjectName: results[i].title,
                     EmpName: results[i].name,
                     avg_bid: results[i].avg_bid,
                     bid_price: results[i].bid_price,

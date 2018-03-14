@@ -7,25 +7,202 @@ router.get('/', function(req, res, next) {
     res.send('respond with a resource');
 });
 
-//get particular user details
-router.get('/user', function(req, res){
-    var userEmail= req.param("email");
-    console.log("Request param email "+userEmail);
-    user.emailId = userEmail;
-    var getUser="select * from freelancer_prototype_db.user u where u.email_id ='"+user.emailId+"'";
+router.post('/signup', function(req, res) {
+    var name= req.param("name");
+    var email = req.param("email");
+    var userId=0;
+    var getUser="select * from user where email_id='"+req.param("email")+"' and password='" + req.param("password") +"'";
+    console.log("Query is:"+getUser);
+    var errors;
+    var data={};
+    data = {name:name,email:email};
     mysql.fetchData(function(err,results){
-        if(results.length > 0) {
-            user.userId =  results[0].user_id;
-            user.name =  results[0].name;
-            user.emailId =  results[0].email_id;
-            user.contact =  results[0].contact;
-            user.aboutMe =  results[0].about_me;
-            user.skills =  results[0].skills;
-            user.profileImage =  results[0].profile_image;
-            user.designation =  results[0].designation;
+        if(err){
+            errors="Unable to process request";
+            res.status(400).json(errors);
         }
-        res.send(user);
+        else
+        {
+            if(results.length > 0){
+                console.log("valid Login");
+            }
+            else {
+                var getUserId="select max(user_id) as maxCnt from user";
+                console.log("max Query is:"+getUserId);
+                mysql.fetchData(function (error,results) {
+                    if(error){
+                        errors="Unable to process request"
+                        res.status(400).json(errors);
+                    }
+                    else{
+                        if(results.length > 0){
+                            userId = results[0].maxCnt+1;
+
+                            var setUser="insert into user (user_id,name,email_id,password) values ("+userId+",'"+req.param("name")+"','" + req.param("email_id") +"','" + req.param("password")+"')";
+                            console.log("insert Query is:"+setUser);
+                            mysql.fetchData(function (error,results) {
+                                if(error){
+                                    errors="User already registered"
+                                    res.status(400).json({error});
+                                }
+                                else{
+                                    if(results.affectedRows > 0){
+                                        console.log("inserted"+JSON.stringify(results));
+
+                                        //data = {name:results[0].name,email:results[0].email};
+                                        res.send(data);
+                                    }
+                                }
+                            },setUser)
+                        }
+                    }
+                },getUserId);
+            }
+        }
     },getUser);
 });
+
+router.post('/login', function(req, res){
+    var getUser="select * from user where email_id='"+req.param("email")+"' and password='" + req.param("password") +"'";
+    console.log("Query is:"+getUser);
+    var data={};
+
+    mysql.fetchData(function(err,results){
+        if(err){
+            throw err;
+        }
+        else
+        {
+            console.log(JSON.stringify(results));
+            if(results.length > 0){
+                data = {
+                    name:results[0].name,
+                    email:results[0].email_id
+                };
+                req.session.name = results[0].name;
+                req.session.email = results[0].email_id;
+                req.session.userID = results[0].user_id;
+                console.log("valid Login");
+                res.send(data);
+            }
+            else {
+                errors="Invalid login Credentials";
+                console.log("Login unsuccessful");
+                res.status(400).json(errors);
+            }
+        }
+    },getUser);
+});
+
+
+router.get('/getUserData', function(req, res){
+    console.log(req.session.name);
+    var errors = "";
+    if(req.session.email !== undefined && req.session.email !== '') {
+        var getUser = "select * from user where email_id='" + req.session.email + "'";// and password='" + req.param("password") +"'";
+        //console.log("Query is:" + getUser);
+        var data = {};
+
+        mysql.fetchData(function (err, results) {
+            if (err) {
+                throw err;
+            }
+            else {
+                if (results.length > 0) {
+                    data = {
+                        name: results[0].name,
+                        email: results[0].email_id,
+                        skills: results[0].skills,
+                        about: results[0].about_me,
+                        phone: results[0].contact
+
+                    };
+                    res.send(data);
+                }
+                else {
+                    errors = "Please Login";
+                    res.status(400).json(errors);
+                }
+            }
+        }, getUser);
+    }
+    else{
+        errors = "Please Login";
+        res.status(400).json(errors);
+    }
+});
+
+router.post('/updateUserData', function(req, res){
+
+    var updateUser="update user set name='"+req.param("name")+"', contact='" + req.param("phone") +"', about_me='"+ req.param("about")+"', skills='"+req.param("skills")+"' where email_id='"+req.param("email")+"'";
+
+    var data={};
+
+    mysql.fetchData(function(err,results){
+        if(err){
+            throw err;
+        }
+        else
+        {
+            console.log(JSON.stringify(results));
+            if(results.affectedRows > 0){
+                var getUser="select * from user where email_id='" + req.param("email") + "'";
+                console.log("Query is:"+getUser);
+
+                mysql.fetchData(function(err,results){
+                    if(err){
+                        throw err;
+                    }
+                    else
+                    {
+                        console.log(JSON.stringify(results));
+                        if (results.length > 0) {
+                            data = {
+                                name: results[0].name,
+                                phone: results[0].contact,
+                                skills: results[0].skills,
+                                about: results[0].about_me,
+                                email:results[0].email_id
+                            };
+                            res.send(data);
+                        }
+                        else {
+                            errors="Cant update this data";
+                            console.log("Login unsuccessful");
+                            res.status(400).json(errors);
+                        }
+                    }
+                },getUser);
+            }
+            else {
+                errors="Cant update this data";
+                console.log("Login unsuccessful");
+                res.status(400).json(errors);
+            }
+        }
+    },updateUser);
+});
+
+
+
+router.get('/logout', function(req, res){
+    console.log("email:------  "+ req.session.email);
+    req.session.destroy();
+    var logoutStat = {};
+    logoutStat.logout = true;
+    res.send(logoutStat);
+});
+
+router.get('/checkSession', function(req, res){
+    console.log("Session Email: --"+req.session.email);
+    var sessionStat = {};
+    if(req.session.email !== undefined && req.session.email !== '') {
+        sessionStat.sessionActive = true;
+    }else{
+        sessionStat.sessionActive = false;
+    }
+    res.send(sessionStat);
+});
+
 
 module.exports = router;
