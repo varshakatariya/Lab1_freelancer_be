@@ -1,6 +1,22 @@
 var express = require('express');
 var router = express.Router();
 var mysql = require('./mysql');
+/*var fs = require('fs');*/
+var multer = require('multer');
+/*
+var storage = multer.diskStorage({
+    destination: function (req, file, cb) {
+        cb(null, 'uploads/')
+    },
+    filename: function (req, file, cb) {
+        cb(null, file.fieldname + '-' + Date.now())
+
+    }
+});
+
+var upload = multer({ storage: storage });
+
+*/
 
 /* GET users listing. */
 router.get('/', function(req, res, next) {
@@ -115,8 +131,9 @@ router.get('/getUserData', function(req, res){
                         email: results[0].email_id,
                         skills: results[0].skills,
                         about: results[0].about_me,
-                        phone: results[0].contact
-
+                        phone: results[0].contact,
+                        profileImage: results[0].profile_image.toString('base64'),
+                        userFiles: results[0].files.toString('base64')
                     };
                     res.send(data);
                 }
@@ -133,10 +150,11 @@ router.get('/getUserData', function(req, res){
     }
 });
 
-router.post('/updateUserData', function(req, res){
+router.post('/updateUserData', function(req, res) {
+    console.log("Profile Image: ", req.param("profileImage"));
 
-    var updateUser="update user set name='"+req.param("name")+"', contact='" + req.param("phone") +"', about_me='"+ req.param("about")+"', skills='"+req.param("skills")+"' where email_id='"+req.param("email")+"'";
-
+    var updateUser="update user set name='"+req.param("name")+"', contact='" + req.param("phone") +"', about_me='"+ req.param("about")+"', skills='"+req.param("skills")+"', profile_image='"+req.param("profileImage")+"', files='"+req.param("files")+"' where email_id='"+req.param("email")+"'";
+    console.log(updateUser);
     var data={};
 
     mysql.fetchData(function(err,results){
@@ -163,7 +181,9 @@ router.post('/updateUserData', function(req, res){
                                 phone: results[0].contact,
                                 skills: results[0].skills,
                                 about: results[0].about_me,
-                                email:results[0].email_id
+                                email:results[0].email_id,
+                                profileImage: results[0].profile_image.toString('base64'),
+                                userFiles: results[0].files.toString('base64')
                             };
                             res.send(data);
                         }
@@ -183,7 +203,6 @@ router.post('/updateUserData', function(req, res){
         }
     },updateUser);
 });
-
 
 
 router.get('/logout', function(req, res){
