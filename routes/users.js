@@ -10,6 +10,7 @@ router.get('/', function(req, res, next) {
 router.post('/signup', function(req, res) {
     var name= req.param("name");
     var email = req.param("email");
+    console.log("email : ",email);
     var userId=0;
     var getUser="select * from user where email_id='"+req.param("email")+"' and password='" + req.param("password") +"'";
     console.log("Query is:"+getUser);
@@ -38,7 +39,7 @@ router.post('/signup', function(req, res) {
                         if(results.length > 0){
                             userId = results[0].maxCnt+1;
 
-                            var setUser="insert into user (user_id,name,email_id,password) values ("+userId+",'"+req.param("name")+"','" + req.param("email_id") +"','" + req.param("password")+"')";
+                            var setUser="insert into user (user_id,name,email_id,password) values ("+userId+",'"+req.param("name")+"','" + req.param("email") +"','" + req.param("password")+"')";
                             console.log("insert Query is:"+setUser);
                             mysql.fetchData(function (error,results) {
                                 if(error){
