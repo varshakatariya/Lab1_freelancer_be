@@ -1,8 +1,17 @@
 var express = require('express');
 var router = express.Router();
 var mysql = require('./mysql');
-/*var fs = require('fs');*/
-var multer = require('multer');
+var bcrypt = require('bcrypt');
+
+var salt = bcrypt.genSaltSync(10);
+
+/*
+var fs = require('fs-extra');
+var url = require('url');*//*
+
+var http = require('http');
+var exec = require('child_process').exec;*//*
+var multer = require('multer');*/
 /*
 var storage = multer.diskStorage({
     destination: function (req, file, cb) {
@@ -32,7 +41,19 @@ router.post('/signup', function(req, res) {
     console.log("Query is:"+getUser);
     var errors;
     var data={};
+    var epassword = null;
     data = {name:name,email:email};
+
+    bcrypt.hash(req.param("password"), salt, function(err, password) {
+
+        if (err) {
+            console.log("Error : ", err);
+        } else {
+            epassword = password;
+            console.log("Encryptedc:      ===============", password);
+        }
+    })
+    console.log("Encryptedc:      ===============", epassword);
     mysql.fetchData(function(err,results){
         if(err){
             errors="Unable to process request";
@@ -55,7 +76,7 @@ router.post('/signup', function(req, res) {
                         if(results.length > 0){
                             userId = results[0].maxCnt+1;
 
-                            var setUser="insert into user (user_id,name,email_id,password) values ("+userId+",'"+req.param("name")+"','" + req.param("email") +"','" + req.param("password")+"')";
+                            var setUser="insert into user (user_id,name,email_id,password) values ("+userId+",'"+req.param("name")+"','" + req.param("email") +"','" + epassword+"')";
                             console.log("insert Query is:"+setUser);
                             mysql.fetchData(function (error,results) {
                                 if(error){
@@ -80,7 +101,7 @@ router.post('/signup', function(req, res) {
 });
 
 router.post('/login', function(req, res){
-    var getUser="select * from user where email_id='"+req.param("email")+"' and password='" + req.param("password") +"'";
+    var getUser="select * from user where email_id='"+req.param("email")+"'";
     console.log("Query is:"+getUser);
     var data={};
 
@@ -92,15 +113,28 @@ router.post('/login', function(req, res){
         {
             console.log(JSON.stringify(results));
             if(results.length > 0){
-                data = {
-                    name:results[0].name,
-                    email:results[0].email_id
-                };
-                req.session.name = results[0].name;
-                req.session.email = results[0].email_id;
-                req.session.userID = results[0].user_id;
-                console.log("valid Login");
-                res.send(data);
+                console.log("db password : "+results[0].password);
+                bcrypt.compare(req.param("password"), results[0].password, function(err, doesMatch){
+                    console.log("doesmatch : ",doesMatch);
+                    if(doesMatch){
+
+                        console.log("inside login");
+                        data = {
+                            name:results[0].name,
+                            email:results[0].email_id
+                        };
+                        req.session.name = results[0].name;
+                        req.session.email = results[0].email_id;
+                        req.session.userID = results[0].user_id;
+                        console.log("valid Login");
+                        res.send(data);
+                    }
+                    else {
+                        errors="Invalid login Credentials";
+                        console.log("Login unsuccessful");
+                        res.status(400).json(errors);
+                    }
+                });
             }
             else {
                 errors="Invalid login Credentials";
@@ -132,8 +166,8 @@ router.get('/getUserData', function(req, res){
                         skills: results[0].skills,
                         about: results[0].about_me,
                         phone: results[0].contact,
-                        profileImage: results[0].profile_image.toString('base64'),
-                        userFiles: results[0].files.toString('base64')
+                        profileImage: results[0].profile_image/*.toString('base64')*/,
+                        userFiles: results[0].files/*.toString('base64')*/
                     };
                     res.send(data);
                 }
@@ -152,13 +186,14 @@ router.get('/getUserData', function(req, res){
 
 router.post('/updateUserData', function(req, res) {
     console.log("Profile Image: ", req.param("profileImage"));
+    console.log("docs ",req.param("docs"));
 
-    var updateUser="update user set name='"+req.param("name")+"', contact='" + req.param("phone") +"', about_me='"+ req.param("about")+"', skills='"+req.param("skills")+"', profile_image='"+req.param("profileImage")+"', files='"+req.param("files")+"' where email_id='"+req.param("email")+"'";
+    var updateUser="update user set name='"+req.param("name")+"', contact='" + req.param("phone") +"', about_me='"+ req.param("about")+"', skills='"+req.param("skills")+"', profile_image='"+req.param("profileImage")+"', files='"+req.param("docs")+"' where email_id='"+req.param("email")+"'";
     console.log(updateUser);
     var data={};
 
-    mysql.fetchData(function(err,results){
-        if(err){
+    mysql.fetchData(function(err,results){        if(err){
+
             throw err;
         }
         else
@@ -182,8 +217,8 @@ router.post('/updateUserData', function(req, res) {
                                 skills: results[0].skills,
                                 about: results[0].about_me,
                                 email:results[0].email_id,
-                                profileImage: results[0].profile_image.toString('base64'),
-                                userFiles: results[0].files.toString('base64')
+                                profileImage: results[0].profile_image/*.toString('base64')*/,
+                                userFiles: results[0].files/*.toString('base64')*/
                             };
                             res.send(data);
                         }
