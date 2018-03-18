@@ -2,7 +2,7 @@ var express = require('express');
 var router = express.Router();
 var mysql = require('./mysql');
 
-/* GET users listing. */
+
 router.get('/', function(req, res, next) {
     res.send('respond with a resource');
 });
@@ -47,7 +47,6 @@ router.get('/listOfAllBidsForProject', function(req, res){
         bList: []
     };
     var project_id= req.param("project_id");
-    console.log("Request param Project ID ---------------------- "+project_id);
 
     var getProjectList="select u.user_id, b.project_id, u.profile_image, u.name, b.bid_price, b.period_in_days";
     getProjectList= getProjectList + " from freelancer_prototype_db.user u, freelancer_prototype_db.bid b ";
@@ -70,14 +69,10 @@ router.get('/listOfAllBidsForProject', function(req, res){
                 i++;
             }
             data.bList = list;
-            console.log("inside listOfAllBidsForProject inside bid",list);
-            console.log("inside listOfAllBidsForProject inside bid",list.length)
             res.send(data);
         }
     },getProjectList);
 });
-
-
 
 //get List of all open projects except user posted project
 router.get('/listOfAllProjectUserHasBidOn', function(req, res){
@@ -106,8 +101,6 @@ router.get('/listOfAllProjectUserHasBidOn', function(req, res){
                 i++;
             }
             data.bList = list;
-            console.log("inside listOfAllProjectUserHasBidOn inside bid",list);
-            console.log("inside listOfAllProjectUserHasBidOn inside bid",list.length)
             res.send(data);
         }
     },getProjectList);

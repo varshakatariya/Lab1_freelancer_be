@@ -4,16 +4,10 @@ var mysql = require('./mysql');
 
 var nBids = 0;
 
-
 /* GET users listing. */
 router.get('/', function(req, res, next) {
     res.send('respond with a resource');
 });
-
-function changeToDate(date){
-    if (date instanceof Date)
-        return date.toLocaleFormat("%Y-%m-%d %H:%M:%S")
-}
 
 router.post('/postProject', function(req, res){
    var getProjectId="select max(project_id) as maxCnt from project";
@@ -22,8 +16,7 @@ router.post('/postProject', function(req, res){
     var finDate = d.getFullYear()+'-'+d.getMonth()+'-'+d.getDate()+" "+d.getHours()+":"+d.getMinutes()+":"+d.getSeconds();
     var projectId;
     var userID = req.session.userID;
-    console.log("max Query is:"+getProjectId);
-    console.log("USer ID is:"+userID);
+    console.log("SQL : :"+getProjectId);
     mysql.fetchData(function (error,results) {
         if(error){
             errors="Unable to process request";
@@ -35,7 +28,7 @@ router.post('/postProject', function(req, res){
                 //endDate = changeToDate(req.param("endDate"));
 
                 var addProject="insert into project (project_id,employer_id,title,description, files, skills, budget, avg_bid, status, project_completion_date) values ('"+projectId+"','"+userID+"','" + req.param("projectName") +"','" + req.param("description") +"','" + req.param("projectFiles") +"','"+ req.param("skills") +"','" + req.param("budget")+"','0','Open','"+finDate+"')";
-                console.log("insert Query is:"+addProject);
+                console.log("insert SQL : :"+addProject);
                 mysql.fetchData(function (error,results) {
                     if(error){
                         errors="Unable to add project at this time."
@@ -43,8 +36,7 @@ router.post('/postProject', function(req, res){
                     }
                     else{
                         if(results.affectedRows > 0){
-                            console.log("inserted"+JSON.stringify(results));
-
+                            console.log("SQL insert" +JSON.stringify(results));
                             res.send("Project Posted Successfully")
                         }
                     }
@@ -61,7 +53,6 @@ router.get('/userAsFreelancerProjects', function(req, res){
         projectsList: []
     };
     var user_id= req.session.userID;
-    console.log("Request param user ID "+user_id);
     var getProjectList  = "select p.project_id, p.description, u.name, p.employer_id, p.title, p.avg_bid, p.project_completion_date, p.status, p.skills ";
     getProjectList = getProjectList + "from project p, user u where p.status = '"+"Open"+"'";
     getProjectList = getProjectList + " and p.employer_id <>  "+user_id+" and p.employer_id=u.user_id";
@@ -97,7 +88,6 @@ router.get('/listOfAllProjectsPostedByEmployer', function(req, res){
         bList: []
     };
     var user_id= req.session.userID;
-    console.log("Request param user ID "+user_id);
     var getProjectList = "select p.project_id, u.user_id, p.title, p.avg_bid, u.name, p.project_completion_date, p.status";
     getProjectList = getProjectList + " from freelancer_prototype_db.project p, freelancer_prototype_db.user u";
     getProjectList = getProjectList + " where u.user_id = p.employer_id and p.status = '"+"Open"+"' and u.user_id = "+user_id;
@@ -118,8 +108,6 @@ router.get('/listOfAllProjectsPostedByEmployer', function(req, res){
                 i++;
             }
             data.bList = list;
-            console.log("inside listOfAllProjectsPostedByEmployer inside project", list);
-            console.log("inside listOfAllProjectsPostedByEmployer inside project", list.length)
             res.send(data);
         }
     },getProjectList);
@@ -135,7 +123,6 @@ function getBidsCount(project_id){
             nBids = results[0].numberOfBids;
         }
     },getBids);
-    console.log("Bids inside function : ",nBids);
     return bids;
 }
 
@@ -145,8 +132,6 @@ router.get('/getBids', function(req, res){
         bidsList: []
     };
     var project_id= req.param("project_id");
-    console.log("Request param Project ID ---------------------- "+project_id);
-
     var getProjectList="select u.user_id, b.project_id,  u.name, b.bid_price, b.period_in_days";
     getProjectList= getProjectList + " from user u, bid b ";
     getProjectList= getProjectList + " where b.user_id = u.user_id and b.project_id = "+project_id;
@@ -167,8 +152,6 @@ router.get('/getBids', function(req, res){
                 i++;
             }
             data.bidsList = list;
-            console.log("inside listOfAllBidsForProject inside bid",list);
-            console.log("inside listOfAllBidsForProject inside bid",list.length)
             res.send(data);
         }
     },getProjectList);
@@ -179,7 +162,7 @@ router.post('/bidProjectNow', function(req, res){
     var user_id = req.session.userID;
     var bidProject="insert into bid(user_id,project_id,bid_price,period_in_days) values";
     bidProject= bidProject + " ('"+user_id+"','"+req.param("project_id")+"','"+req.param("bid_price")+"','"+req.param("period_in_days")+"' )";
-    console.log("insert Query is:"+bidProject);
+    console.log("insert SQL : :"+bidProject);
     var errors;
     mysql.fetchData(function (error,results) {
         if(error){
@@ -189,7 +172,7 @@ router.post('/bidProjectNow', function(req, res){
         else{
             if(results.affectedRows > 0){
                 var update_bid_count="update project set avg_bid = avg_bid+1 where project_id = "+req.param("project_id");
-                console.log("insert Query is:"+update_bid_count);
+                console.log("insert SQL : :"+update_bid_count);
 
                 mysql.fetchData(function (error,results) {
                     if(error){
@@ -198,7 +181,7 @@ router.post('/bidProjectNow', function(req, res){
                     }
                     else{
                         if(results.affectedRows > 0){
-                            console.log("inserted"+JSON.stringify(results));
+                            console.log("SQL insert" +JSON.stringify(results));
                             res.send("Bid Done Successfully");
                         }
                     }
@@ -209,13 +192,12 @@ router.post('/bidProjectNow', function(req, res){
 });
 
 router.get('/getProjectDetails', function(req, res){
-    console.log("Inside Project details")
+    console.log("Inside Project details");
     var project_id= req.param("project_id");
     getBidsCount(project_id);
-
-    console.log("Request param project id "+project_id);
+    
     var getProject="select * from project where project_id="+project_id;
-    console.log("Query is:"+getProject);
+    console.log("SQL :"+getProject);
 
     var data = {
         projectName: "",
@@ -226,9 +208,7 @@ router.get('/getProjectDetails', function(req, res){
         averageBid: "",
         numberOfBids: ""
     };
-    console.log("Number of Bids inside project function  : "+nBids);
     mysql.fetchData(function(error,results){
-        console.log("result--------------------fro project-----------",results);
         if(results.length > 0) {
             data = {
                 projectName: results[0].title,
@@ -243,5 +223,28 @@ router.get('/getProjectDetails', function(req, res){
         }
     },getProject);
 });
+
+router.post('/hireFreelancer', function(req, res){
+    //var addFreelancerDetails = "insert into project (user_id) values ('" + req.param("user_id") +"') where project_id = "+req.param("project_id");
+    var addFreelancerDetails = "update project set user_id ='" + req.param("user_id") +"' where project_id = "+req.param("project_id");
+    var error = "";
+    var data = {};
+    mysql.fetchData(function(err,results){
+        console.log(JSON.stringify(results));
+        if(err){
+            error = "Unable to process your request";
+            res.status(400).json({error});
+        }
+        else if(results.affectedRows > 0) {
+            data.message = "Freelancer Hired Successfully";
+            res.send(data);
+        }
+    },addFreelancerDetails);
+});
+
+function changeToDate(date){
+    if (date instanceof Date)
+        return date.toLocaleFormat("%Y-%m-%d %H:%M:%S")
+}
 
 module.exports = router;

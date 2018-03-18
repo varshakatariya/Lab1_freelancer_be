@@ -2,30 +2,7 @@ var express = require('express');
 var router = express.Router();
 var mysql = require('./mysql');
 var bcrypt = require('bcrypt');
-
 var salt = bcrypt.genSaltSync(10);
-
-/*
-var fs = require('fs-extra');
-var url = require('url');*//*
-
-var http = require('http');
-var exec = require('child_process').exec;*//*
-var multer = require('multer');*/
-/*
-var storage = multer.diskStorage({
-    destination: function (req, file, cb) {
-        cb(null, 'uploads/')
-    },
-    filename: function (req, file, cb) {
-        cb(null, file.fieldname + '-' + Date.now())
-
-    }
-});
-
-var upload = multer({ storage: storage });
-
-*/
 
 /* GET users listing. */
 router.get('/', function(req, res, next) {
@@ -47,13 +24,11 @@ router.post('/signup', function(req, res) {
     bcrypt.hash(req.param("password"), salt, function(err, password) {
 
         if (err) {
-            console.log("Error : ", err);
+            console.log("Error while encrypting password: ", err);
         } else {
             epassword = password;
-            console.log("Encryptedc:      ===============", password);
         }
     })
-    console.log("Encryptedc:      ===============", epassword);
     mysql.fetchData(function(err,results){
         if(err){
             errors="Unable to process request";
@@ -86,8 +61,6 @@ router.post('/signup', function(req, res) {
                                 else{
                                     if(results.affectedRows > 0){
                                         console.log("inserted"+JSON.stringify(results));
-
-                                        //data = {name:results[0].name,email:results[0].email};
                                         res.send(data);
                                     }
                                 }
@@ -115,10 +88,8 @@ router.post('/login', function(req, res){
             if(results.length > 0){
                 console.log("db password : "+results[0].password);
                 bcrypt.compare(req.param("password"), results[0].password, function(err, doesMatch){
-                    console.log("doesmatch : ",doesMatch);
                     if(doesMatch){
 
-                        console.log("inside login");
                         data = {
                             name:results[0].name,
                             email:results[0].email_id
@@ -148,10 +119,10 @@ router.post('/login', function(req, res){
 
 router.get('/getUserData', function(req, res){
     console.log(req.session.name);
+
     var errors = "";
     if(req.session.email !== undefined && req.session.email !== '') {
         var getUser = "select * from user where email_id='" + req.session.email + "'";// and password='" + req.param("password") +"'";
-        //console.log("Query is:" + getUser);
         var data = {};
 
         mysql.fetchData(function (err, results) {
@@ -185,14 +156,12 @@ router.get('/getUserData', function(req, res){
 });
 
 router.post('/updateUserData', function(req, res) {
-    console.log("Profile Image: ", req.param("profileImage"));
-    console.log("docs ",req.param("docs"));
-
     var updateUser="update user set name='"+req.param("name")+"', contact='" + req.param("phone") +"', about_me='"+ req.param("about")+"', skills='"+req.param("skills")+"', profile_image='"+req.param("profileImage")+"', files='"+req.param("docs")+"' where email_id='"+req.param("email")+"'";
     console.log(updateUser);
     var data={};
 
-    mysql.fetchData(function(err,results){        if(err){
+    mysql.fetchData(function(err,results){
+        if(err){
 
             throw err;
         }

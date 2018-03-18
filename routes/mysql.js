@@ -5,7 +5,7 @@ var mysql = require('mysql');
 //Put your mysql configuration settings - user, password, database and port
 function getConnection(){
     var connectionPool = mysql.createPool({
-        connectionLimit : 100,
+        connectionLimit : 500,
         host     : 'localhost',
         user     : 'root',
         password : 'root',
