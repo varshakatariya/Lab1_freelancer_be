@@ -87,6 +87,7 @@ router.get('/listOfAllProjectsPostedByEmployer', function(req, res){
     var data = {
         bList: []
     };
+    console.log("/listOfAllProjectsPostedByEmployer-----------------------------------------------",req.session.userID);
     var user_id= req.session.userID;
     var getProjectList = "select p.project_id, u.user_id, p.title, p.avg_bid, u.name, p.project_completion_date, p.status";
     getProjectList = getProjectList + " from freelancer_prototype_db.project p, freelancer_prototype_db.user u";
