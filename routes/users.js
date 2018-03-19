@@ -21,14 +21,6 @@ router.post('/signup', function(req, res) {
     var epassword = null;
     data = {name:name,email:email};
 
-    bcrypt.hash(req.param("password"), salt, function(err, password) {
-
-        if (err) {
-            console.log("Error while encrypting password: ", err);
-        } else {
-            epassword = password;
-        }
-    })
     mysql.fetchData(function(err,results){
         if(err){
             errors="Unable to process request";
@@ -50,10 +42,29 @@ router.post('/signup', function(req, res) {
                     else{
                         if(results.length > 0){
                             userId = results[0].maxCnt+1;
-
-                            var setUser="insert into user (user_id,name,email_id,password) values ("+userId+",'"+req.param("name")+"','" + req.param("email") +"','" + epassword+"')";
-                            console.log("insert Query is:"+setUser);
-                            mysql.fetchData(function (error,results) {
+                            bcrypt.hash(req.param("password"), salt, function(err, password) {
+                                if (err) {
+                                    console.log("Error while encrypting password: ", err);
+                                } else {
+                                    var setUser="insert into user (user_id,name,email_id,password) values ("+userId+",'"+req.param("name")+"','" + req.param("email") +"','" + password+"')";
+                                    console.log("insert Query is:"+setUser);
+                                    mysql.fetchData(function (error,results) {
+                                        if(error){
+                                            errors="User already registered"
+                                            res.status(400).json({error});
+                                        }
+                                        else{
+                                            if(results.affectedRows > 0){
+                                                console.log("inserted"+JSON.stringify(results));
+                                                res.send(data);
+                                            }
+                                        }
+                                    },setUser)
+                                }
+                            });
+                            /*var setUser="insert into user (user_id,name,email_id,password) values ("+userId+",'"+req.param("name")+"','" + req.param("email") +"','" + epassword+"')";
+                            *//*console.log("insert Query is:"+setUser);*/
+                           /* mysql.fetchData(function (error,results) {
                                 if(error){
                                     errors="User already registered"
                                     res.status(400).json({error});
@@ -64,7 +75,7 @@ router.post('/signup', function(req, res) {
                                         res.send(data);
                                     }
                                 }
-                            },setUser)
+                            },setUser)*/
                         }
                     }
                 },getUserId);

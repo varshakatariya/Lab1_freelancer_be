@@ -46,6 +46,38 @@ router.post('/postProject', function(req, res){
     },getProjectId);
 });
 
+router.get('/getAllOpenProjects', function(req, res){
+    var list= [];
+    var data = {
+        projectsList: []
+    };
+    var user_id= req.session.userID;
+    var getProjectList  = "select p.project_id, p.description, u.name, p.employer_id, p.title, p.avg_bid, p.project_completion_date, p.status, p.skills ";
+    getProjectList = getProjectList + "from freelancer_prototype_db.project p , freelancer_prototype_db.user u where p.employer_id = u.user_id and p.status = '"+"Open"+"'";
+
+    mysql.fetchData(function(err,results){
+        if(results.length > 0) {
+            var i = 0;
+            while(i<results.length) {
+                var project = {
+                    project_id: results[i].project_id,
+                    description: results[i].description,
+                    employer_name : results[i].name,
+                    employer_id: results[i].employer_id,
+                    title: results[i].title,
+                    avg_bid: results[i].avg_bid,
+                    skills:results[i].skills,
+                    project_completion_date: results[i].project_completion_date,
+                    status: results[i].status
+                }
+                list.push(project);
+                i++;
+            }
+            data.projectsList = list;
+            res.send(data);
+        }
+    },getProjectList);
+});
 
 router.get('/userAsFreelancerProjects', function(req, res){
     var list= [];
