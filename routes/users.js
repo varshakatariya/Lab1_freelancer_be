@@ -239,5 +239,142 @@ router.get('/checkSession', function(req, res){
     res.send(sessionStat);
 });
 
+router.get('/balance', function(req, res){
+    console.log("inside balance",req.session.userID);
+    var getBal="select u.balance from freelancer_prototype_db.user u where user_id= "+req.session.userID;
+    console.log("Query is:"+getBal);
+    var userBalance = "";
 
+    mysql.fetchData(function(err,results){
+        if(err){
+            throw err;
+        }
+        else
+        {
+            console.log(JSON.stringify(results));
+            if(results.length > 0) {
+                balance = results[0].balance;
+                userBalance = ""+balance;
+                res.send(userBalance);
+
+            }else{
+                console.log("Transaction unsuccessful, please try again");
+                res.status(400).json(errors);
+            }
+        }
+    },getBal);
+});
+
+router.get('/transactionList', function(req, res){
+    var getList="select h.payment_type, h.amount from freelancer_prototype_db.payment_history h where h.user_id = "+req.session.userID;
+    console.log("Query is:"+getList);
+    var tList=[];
+
+    mysql.fetchData(function(err,results){
+        if(err){
+            throw err;
+        }
+        else
+        {
+            console.log(JSON.stringify(results));
+            if(results.length > 0){
+                var i = 0;
+                while(i<results.length) {
+                    var transaction = {
+                        payment_type: results[i].payment_type,
+                        amount: results[i].amount
+                    }
+                    tList.push(transaction);
+                    i++;
+                }
+                res.send(tList);
+            }
+            else {
+                console.log("Transaction unsuccessful, please try again");
+                res.status(400).json(errors);
+            }
+        }
+    },getList);
+});
+
+router.post('/addMoney', function(req, res){
+    var error = "";
+    var data = {};
+    var updateBal = "update freelancer_prototype_db.user u set u.balance = u.balance + "+ req.param("money") +" where u.user_id = "+req.session.userID;
+    var errors;
+    mysql.fetchData(function (error,results) {
+        if(error){
+            errors="Unable to process request";
+            res.status(400).json(errors);
+        }
+        else{
+            console.log("update Emp balance SQL : :"+updateBal);
+            var getTransId1="select max(trans_id) as maxCnt from freelancer_prototype_db.payment_history";
+            mysql.fetchData(function (error,results) {
+                if (error) {
+                    errors = "Unable to process request";
+                    res.status(400).json(errors);
+                }
+                else {
+                    if (results.length > 0) {
+                        var transId1 = results[0].maxCnt + 1;
+                        var update_history = "insert into freelancer_prototype_db.payment_history (trans_id, user_id, project_id, payment_type, amount) values ( " + transId1+ "," +req.session.userID + "," + null +","+ "'Cr'" + "," + req.param("money") + " )";
+                        console.log("SQL insert", update_history);
+                        mysql.fetchData(function (error, results) {
+                            if (error) {
+                                errors = "Unable to add money at this time."
+                                res.status(400).json({errors});
+                            }
+                            else {
+                                var message = "Balance updated successfully"
+                                res.send(message);
+                            }
+                        }, update_history);
+                    }
+                }
+            },getTransId1);
+        }
+    },updateBal);
+});
+
+router.post('/withdrawMoney', function(req, res){
+    var error = "";
+    var data = {};
+
+    var updateBal = "update freelancer_prototype_db.user u set u.balance = u.balance - "+ req.param("money") +" where u.user_id = "+req.session.userID;
+    var errors;
+    mysql.fetchData(function (error,results) {
+        if(error){
+            errors="Unable to process request";
+            res.status(400).json(errors);
+        }
+        else{
+            console.log("update Emp balance SQL : :"+updateBal);
+            var getTransId1="select max(trans_id) as maxCnt from freelancer_prototype_db.payment_history";
+            mysql.fetchData(function (error,results) {
+                if (error) {
+                    errors = "Unable to process request";
+                    res.status(400).json(errors);
+                }
+                else {
+                    if (results.length > 0) {
+                        var transId1 = results[0].maxCnt + 1;
+                        var update_history = "insert into freelancer_prototype_db.payment_history (trans_id, user_id, project_id, payment_type, amount) values ( " + transId1 +","+ req.session.userID + "," + null +","+"'Db'" + "," + req.param("money") + " )";
+                        console.log("SQL insert", update_history);
+                        mysql.fetchData(function (error, results) {
+                            if (error) {
+                                errors = "Unable to withdraw money at this time."
+                                res.status(400).json({errors});
+                            }
+                            else {
+                                var message = "Balance updated successfully"
+                                res.send(message);
+                            }
+                        }, update_history);
+                    }
+                }
+            },getTransId1);
+        }
+    },updateBal);
+});
 module.exports = router;

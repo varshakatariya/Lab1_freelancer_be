@@ -10,7 +10,7 @@ router.get('/', function(req, res, next) {
 });
 
 router.post('/postProject', function(req, res){
-   var getProjectId="select max(project_id) as maxCnt from project";
+    var getProjectId="select max(project_id) as maxCnt from project";
     var errors;
     var d = new Date(req.param("endDate"));
     var finDate = d.getFullYear()+'-'+d.getMonth()+'-'+d.getDate()+" "+d.getHours()+":"+d.getMinutes()+":"+d.getSeconds();
@@ -53,7 +53,7 @@ router.get('/getAllOpenProjects', function(req, res){
     };
     var user_id= req.session.userID;
     var getProjectList  = "select p.project_id, p.description, u.name, p.employer_id, p.title, p.avg_bid, p.project_completion_date, p.status, p.skills ";
-    getProjectList = getProjectList + "from freelancer_prototype_db.project p , freelancer_prototype_db.user u where p.employer_id = u.user_id and p.status = '"+"Open"+"'";
+    getProjectList = getProjectList + "from freelancer_prototype_db.project p , freelancer_prototype_db.user u where p.employer_id = u.user_id";/*and p.status = '"+"Open"+"'"*/
 
     mysql.fetchData(function(err,results){
         if(results.length > 0) {
@@ -86,8 +86,8 @@ router.get('/userAsFreelancerProjects', function(req, res){
     };
     var user_id= req.session.userID;
     var getProjectList  = "select p.project_id, p.description, u.name, p.employer_id, p.title, p.avg_bid, p.project_completion_date, p.status, p.skills ";
-    getProjectList = getProjectList + "from project p, user u where p.status = '"+"Open"+"'";
-    getProjectList = getProjectList + " and p.employer_id <>  "+user_id+" and p.employer_id=u.user_id";
+    getProjectList = getProjectList + "from project p, user u where ";
+    getProjectList = getProjectList + "  p.employer_id <>  "+user_id+" and p.employer_id=u.user_id";
 
     mysql.fetchData(function(err,results){
         if(results.length > 0) {
@@ -123,7 +123,7 @@ router.get('/listOfAllProjectsPostedByEmployer', function(req, res){
     var user_id= req.session.userID;
     var getProjectList = "select p.project_id, u.user_id, p.title, p.avg_bid, u.name, p.project_completion_date, p.status";
     getProjectList = getProjectList + " from freelancer_prototype_db.project p, freelancer_prototype_db.user u";
-    getProjectList = getProjectList + " where u.user_id = p.employer_id and p.status = '"+"Open"+"' and u.user_id = "+user_id;
+    getProjectList = getProjectList + " where u.user_id = p.employer_id and u.user_id = "+user_id;
     mysql.fetchData(function(err,results){
         if(results.length > 0) {
             var i = 0;
@@ -160,6 +160,8 @@ function getBidsCount(project_id){
 }
 
 router.get('/getBids', function(req, res){
+    console.log("Bids List : inside node  inside getBids");
+    console.log("Bids List : inside node  inside getBids project id",req.param("project_id"));
     var list= [];
     var data = {
         bidsList: []
@@ -184,6 +186,7 @@ router.get('/getBids', function(req, res){
                 list.push(project);
                 i++;
             }
+            console.log("List of bids inside /getBids",list);
             data.bidsList = list;
             res.send(data);
         }
@@ -232,6 +235,7 @@ router.get('/getProjectDetails', function(req, res){
     var getProject="select * from project where project_id="+project_id;
     console.log("SQL :"+getProject);
 
+    var isEmployer = false;
     var data = {
         projectName: "",
         description: "",
@@ -239,27 +243,65 @@ router.get('/getProjectDetails', function(req, res){
         skills: "",
         budgetRange: "",
         averageBid: "",
-        numberOfBids: ""
+        numberOfBids: "",
+        employer_id:"",
+        status:"",
+        transList: []
     };
     mysql.fetchData(function(error,results){
         if(results.length > 0) {
+            if(req.session.userID == results[0].employer_id){
+                isEmployer = true;
+            }
             data = {
+                isEmployer,
                 projectName: results[0].title,
                 description: results[0].description,
                 files: results[0].files,
                 skills: results[0].skills,
                 budget: results[0].budget,
                 averageBid:  results[0].avg_bid,
-                numberOfBids: nBids
+                numberOfBids: nBids,
+                employer_id: results[0].employer_id,
+                status: results[0].status
             };
-            res.send(data);
+
+            var getTransactions = "select h.user_id, h.project_id, h.payment_type, h.amount from freelancer_prototype_db.payment_history h where h.project_id =" + req.param("project_id");
+            console.log("SQL select ", getTransactions);
+            mysql.fetchData(function (error, results) {
+                if (error) {
+                    errors = "Unable to add payment at this time."
+                    res.status(400).json({errors});
+                }
+                else {
+                    if (results.length > 0) {
+                        var i = 0;
+                        var list= [];
+                        while(i<results.length) {
+                            var transaction = {
+                                user_id: results[i].user_id,
+                                project_id: results[i].project_id,
+                                payment_type : results[i].payment_type,
+                                amount: results[i].amount
+                            }
+                            list.push(transaction);
+                            i++;
+                        }
+                        data.transList = list;
+                        console.log("Project details transaction list ",data.transList);
+                        res.send(data);
+                    }else{
+                        res.send(data);
+                    }
+                }
+            }, getTransactions);
         }
     },getProject);
 });
 
 router.post('/hireFreelancer', function(req, res){
     //var addFreelancerDetails = "insert into project (user_id) values ('" + req.param("user_id") +"') where project_id = "+req.param("project_id");
-    var addFreelancerDetails = "update project set user_id ='" + req.param("user_id") +"' where project_id = "+req.param("project_id");
+    var addFreelancerDetails = "update project set freelancer_id ='" + req.param("user_id") +"' where project_id = "+req.param("project_id");
     var error = "";
     var data = {};
     mysql.fetchData(function(err,results){
@@ -273,6 +315,134 @@ router.post('/hireFreelancer', function(req, res){
             res.send(data);
         }
     },addFreelancerDetails);
+});
+
+router.post('/makePayment', function(req, res){
+    console.log("bid price",req.param("bid_price"));
+    var error = "";
+    var data = {};
+    var updateEmpBal = "update freelancer_prototype_db.user u set u.balance = u.balance - "+ req.param("bid_price") +" where u.user_id = "+req.param("employer_id");
+
+    var errors;
+    mysql.fetchData(function (error,results) {
+        if(error){
+            errors="Unable to process request";
+            res.status(400).json(errors);
+        }
+        else{
+            console.log("update Emp balance SQL : :"+updateEmpBal);
+            if(results.affectedRows > 0){
+                var getTransId="select max(trans_id) as maxCnt from freelancer_prototype_db.payment_history";
+                mysql.fetchData(function (error,results) {
+                    if(error){
+                        errors="Unable to process request";
+                        res.status(400).json(errors);
+                    }
+                    else {
+                        if (results.length > 0) {
+                            var transId = results[0].maxCnt + 1;
+                            var update_emp_history = "insert into freelancer_prototype_db.payment_history (trans_id, user_id, project_id, payment_type, amount) values ( "+ transId + "," +req.param("employer_id") +"," + req.param("project_id")+ "," +"'Db'"+"," +req.param("bid_price")+" )";
+                            console.log("SQL insert",update_emp_history);
+                            mysql.fetchData(function (error,results) {
+                                if(error){
+                                    errors="Unable to deduct payment from employer at this time."
+                                    res.status(400).json({errors});
+                                }
+                                else{
+                                    console.log("update Eupdate_emp_history : :"+update_emp_history);
+                                    if(results.affectedRows > 0){
+                                        console.log("SQL update" +JSON.stringify(results));
+                                        var updateUserBal = "update freelancer_prototype_db.user u set u.balance = u.balance + "+ req.param("bid_price") +" where u.user_id = "+req.param("user_id");
+                                        console.log("SQL Update : :"+updateUserBal);
+
+                                        mysql.fetchData(function (error,results) {
+                                            if(error){
+                                                errors="Unable to add payment at this time."
+                                                res.status(400).json({errors});
+                                            }
+                                            else{
+                                                console.log("update updateUserBal : :"+updateUserBal);
+                                                if(results.affectedRows > 0){
+                                                    console.log("SQL insert" +JSON.stringify(results));
+                                                    var getTransId1="select max(trans_id) as maxCnt from freelancer_prototype_db.payment_history";
+                                                    mysql.fetchData(function (error,results) {
+                                                        if (error) {
+                                                            errors = "Unable to process request";
+                                                            res.status(400).json(errors);
+                                                        }
+                                                        else {
+                                                            if (results.length > 0) {
+                                                                var transId1 = results[0].maxCnt + 1;
+                                                                var update_emp_history = "insert into freelancer_prototype_db.payment_history (trans_id, user_id, project_id, payment_type, amount) values ( " + transId1 +","+ req.param("user_id") + "," + req.param("project_id") + "," + "'Cr'" + "," + req.param("bid_price") + " )";
+                                                                console.log("SQL insert ", update_emp_history);
+                                                                mysql.fetchData(function (error, results) {
+                                                                    if (error) {
+                                                                        errors = "Unable to add payment at this time."
+                                                                        res.status(400).json({errors});
+                                                                    }
+                                                                    else {
+                                                                        if (results.affectedRows > 0) {
+                                                                            console.log("SQL insert ", update_emp_history);
+                                                                            console.log("SQL insert" + JSON.stringify(results));
+
+                                                                            var update_project = "update freelancer_prototype_db.project p set p.status = " + "'Closed'" + " where p.project_id = " + req.param("project_id");
+                                                                            console.log("SQL insert ", update_project);
+                                                                            mysql.fetchData(function (error, results) {
+                                                                                if (error) {
+                                                                                    errors = "Unable to add payment at this time."
+                                                                                    res.status(400).json({errors});
+                                                                                }
+                                                                                else {
+                                                                                    if (results.affectedRows > 0) {
+                                                                                        var getTransactions = "select h.user_id, h.project_id, h.payment_type, h.amount from freelancer_prototype_db.payment_history h where h.project_id =" + req.param("project_id");
+                                                                                        console.log("SQL select ", getTransactions);
+                                                                                        mysql.fetchData(function (error, results) {
+                                                                                            if (error) {
+                                                                                                errors = "Unable to add payment at this time."
+                                                                                                res.status(400).json({errors});
+                                                                                            }
+                                                                                            else {
+                                                                                                if (results.length > 0) {
+                                                                                                    var i = 0;
+                                                                                                    var list= [];
+                                                                                                    while(i<results.length) {
+                                                                                                        var transaction = {
+                                                                                                            user_id: results[i].user_id,
+                                                                                                            project_id: results[i].project_id,
+                                                                                                            payment_type : results[i].payment_type,
+                                                                                                            amount: results[i].amount
+                                                                                                        }
+                                                                                                        list.push(transaction);
+                                                                                                        i++;
+                                                                                                    }
+                                                                                                    var data = {transList: list,
+                                                                                                        message: "Payment done Successfully"
+                                                                                                    }
+                                                                                                    res.send(data);
+                                                                                                }
+                                                                                            }
+                                                                                        }, getTransactions);
+                                                                                    }
+                                                                                }
+                                                                            }, update_project);
+                                                                        }
+                                                                    }
+                                                                }, update_emp_history);
+                                                            }
+                                                        }
+                                                    },getTransId1);
+                                                }
+                                            }
+                                        },updateUserBal);
+                                    }
+                                }
+                            },update_emp_history);
+                        }
+                    }
+                },getTransId);
+            }
+        }
+    },updateEmpBal);
 });
 
 function changeToDate(date){
